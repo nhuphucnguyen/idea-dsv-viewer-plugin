@@ -1,0 +1,35 @@
+<idea-plugin>
+    <id>com.dsvviewer.dsv-viewer</id>
+    <name>DSV File Viewer</name>
+    <vendor email="support@example.com" url="https://example.com">DSV Viewer</vendor>
+
+    <description><![CDATA[
+        <p>Beautiful table viewer for delimiter-separated values (DSV) files.</p>
+        <p>Supports CSV, TSV, and custom delimiters with advanced parsing features:</p>
+        <ul>
+            <li>Interactive table view with sorting and filtering</li>
+            <li>Automatic delimiter detection</li>
+            <li>Header row toggle</li>
+            <li>Quote-aware parsing</li>
+            <li>Export functionality</li>
+            <li>Switch between table and text view</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+                name="DSV File"
+                implementationClass="com.dsvviewer.DSVFileType"
+                fieldName="INSTANCE"
+                extensions="csv;tsv;dsv"/>
+
+        <fileEditorProvider
+                implementation="com.dsvviewer.editor.DSVFileEditorProvider"/>
+    </extensions>
+
+    <actions>
+        <!-- Action groups can be added here -->
+    </actions>
+</idea-plugin>
