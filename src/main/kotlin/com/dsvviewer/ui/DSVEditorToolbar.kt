@@ -26,6 +26,7 @@ import javax.swing.event.DocumentEvent
 class DSVEditorToolbar(
     private val onDelimiterChanged: (Char) -> Unit,
     private val onHeaderToggled: (Boolean) -> Unit,
+    private val onZeroBasedToggled: (Boolean) -> Unit,
     private val onRefresh: () -> Unit,
     private val onExport: () -> Unit,
     private val onToggleView: () -> Unit,
@@ -34,6 +35,7 @@ class DSVEditorToolbar(
 
     private val delimiterComboBox: ComboBox<DelimiterOption>
     private val headerCheckBox: JBCheckBox
+    private val indexBaseComboBox: ComboBox<String>
     private val searchField: SearchTextField
     private val infoLabel: JBLabel
     
@@ -78,6 +80,24 @@ class DSVEditorToolbar(
             onHeaderToggled(headerCheckBox.isSelected)
         }
         add(headerCheckBox)
+
+        add(Box.createHorizontalStrut(16))
+
+        // Indexing base selector
+        val indexBaseLabel = JBLabel("Indexing:")
+        indexBaseLabel.border = JBUI.Borders.emptyRight(4)
+        add(indexBaseLabel)
+
+        val indexOptions = arrayOf("1-based", "0-based")
+        indexBaseComboBox = ComboBox(indexOptions)
+        indexBaseComboBox.maximumSize = indexBaseComboBox.preferredSize
+        indexBaseComboBox.addItemListener { event ->
+            if (event.stateChange == ItemEvent.SELECTED) {
+                // index 0 is "1-based" (false), index 1 is "0-based" (true)
+                onZeroBasedToggled(indexBaseComboBox.selectedIndex == 1)
+            }
+        }
+        add(indexBaseComboBox)
 
         add(Box.createHorizontalStrut(16))
 
@@ -200,6 +220,11 @@ class DSVEditorToolbar(
      * Gets whether the file has a header row.
      */
     fun hasHeader(): Boolean = headerCheckBox.isSelected
+
+    /**
+     * Gets whether to use zero-based indexing.
+     */
+    fun isZeroBased(): Boolean = indexBaseComboBox.selectedIndex == 1
 
     /**
      * Clears the search field.

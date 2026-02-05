@@ -18,7 +18,7 @@ class DSVParser {
      * @param hasHeader Whether the first row should be treated as headers
      * @return ParsedData containing headers, rows, and metadata
      */
-    fun parse(content: String, delimiter: Char, hasHeader: Boolean): ParsedData {
+    fun parse(content: String, delimiter: Char, hasHeader: Boolean, isZeroBased: Boolean = false): ParsedData {
         if (content.isBlank()) {
             return ParsedData.empty()
         }
@@ -46,7 +46,8 @@ class DSVParser {
             val data = normalizedRows.drop(1)
             headerRow to data
         } else {
-            val generatedHeaders = (1..maxColumns).map { "Column $it" }
+            val start = if (isZeroBased) 0 else 1
+            val generatedHeaders = (start until start + maxColumns).map { "Column $it" }
             generatedHeaders to normalizedRows
         }
 

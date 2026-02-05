@@ -57,6 +57,7 @@ class DSVFileEditor(
         toolbar = DSVEditorToolbar(
             onDelimiterChanged = { reparse() },
             onHeaderToggled = { reparse() },
+            onZeroBasedToggled = { reparse() },
             onRefresh = { reparse() },
             onExport = { exportToCsv() },
             onToggleView = { toggleView() },
@@ -102,7 +103,8 @@ class DSVFileEditor(
 
                 val delimiter = toolbar.getDelimiter()
                 val hasHeader = toolbar.hasHeader()
-                val parsedData = parser.parse(content, delimiter, hasHeader)
+                val isZeroBased = toolbar.isZeroBased()
+                val parsedData = parser.parse(content, delimiter, hasHeader, isZeroBased)
 
                 // Update UI on EDT
                 SwingUtilities.invokeLater {

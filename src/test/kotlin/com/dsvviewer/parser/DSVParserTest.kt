@@ -200,4 +200,14 @@ class DSVParserTest {
         assertEquals("John", result.rows[0][0])
         assertEquals("30", result.rows[0][1])
     }
+    @Test
+    @DisplayName("Parse CSV without header using zero-based indexing")
+    fun testCsvWithoutHeaderZeroBased() {
+        val content = "John,30,New York\nJane,25,London"
+
+        val result = parser.parse(content, ',', hasHeader = false, isZeroBased = true)
+
+        assertEquals(listOf("Column 0", "Column 1", "Column 2"), result.headers)
+        assertEquals(2, result.rowCount)
+    }
 }
