@@ -1,7 +1,7 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.21"
-    id("org.jetbrains.intellij.platform") version "2.2.1"
+    id("org.jetbrains.intellij.platform") version "2.13.1"
 }
 
 group = "com.dsvviewer"
@@ -33,7 +33,7 @@ kotlin {
 tasks {
     patchPluginXml {
         sinceBuild.set("241")
-        untilBuild.set("253.*")
+        // untilBuild is intentionally omitted to support all future IDEA versions
     }
 
     signPlugin {
