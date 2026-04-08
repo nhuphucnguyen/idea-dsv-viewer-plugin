@@ -184,6 +184,8 @@ class DSVFileEditor(
             }
             (contentPanel.layout as CardLayout).show(contentPanel, TEXT_VIEW)
         }
+        
+        toolbar.setViewState(isTableView)
     }
 
     private fun createTextEditor() {

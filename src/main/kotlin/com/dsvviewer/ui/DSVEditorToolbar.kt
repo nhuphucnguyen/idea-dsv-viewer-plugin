@@ -38,6 +38,7 @@ class DSVEditorToolbar(
     private val indexBaseComboBox: ComboBox<String>
     private val searchField: SearchTextField
     private val infoLabel: JBLabel
+    private val toggleViewBtn: JButton
     
     private var currentDelimiter: Char = ','
     private var isUpdatingDelimiter = false
@@ -111,7 +112,7 @@ class DSVEditorToolbar(
         val exportBtn = createIconButton("Export as CSV", AllIcons.ToolbarDecorator.Export) { onExport() }
         actionsPanel.add(exportBtn)
 
-        val toggleViewBtn = createIconButton("Switch to Text View", AllIcons.Actions.ToggleSoftWrap) { onToggleView() }
+        toggleViewBtn = createIconButton("Switch to Text View", AllIcons.FileTypes.Text) { onToggleView() }
         actionsPanel.add(toggleViewBtn)
 
         add(actionsPanel)
@@ -209,6 +210,19 @@ class DSVEditorToolbar(
      */
     fun setHasHeader(hasHeader: Boolean) {
         headerCheckBox.isSelected = hasHeader
+    }
+
+    /**
+     * Updates the toggle view button based on the current view state.
+     */
+    fun setViewState(isTableView: Boolean) {
+        if (isTableView) {
+            toggleViewBtn.icon = AllIcons.FileTypes.Text
+            toggleViewBtn.toolTipText = "Switch to Text View"
+        } else {
+            toggleViewBtn.icon = AllIcons.Actions.Preview
+            toggleViewBtn.toolTipText = "Switch to Table View"
+        }
     }
 
     /**
