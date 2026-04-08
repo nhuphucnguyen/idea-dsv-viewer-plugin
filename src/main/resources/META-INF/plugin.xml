@@ -21,6 +21,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileType
                 name="DSV File"
+                language="TEXT"
                 implementationClass="com.dsvviewer.DSVFileType"
                 fieldName="INSTANCE"
                 extensions="csv;tsv;dsv"/>

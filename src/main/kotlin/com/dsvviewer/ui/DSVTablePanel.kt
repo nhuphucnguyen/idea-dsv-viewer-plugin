@@ -203,14 +203,10 @@ class DSVTablePanel : JPanel(BorderLayout()) {
         return searchHighlightRows.size
     }
 
-    /**
-     * Gets the underlying table component.
-     */
     fun getTable(): JBTable = table
 
-    /**
-     * Custom cell renderer with alternating row colors and search highlighting.
-     */
+    fun getTableModel(): DSVTableModel = tableModel
+
     private inner class DSVCellRenderer : DefaultTableCellRenderer() {
         
         private val stripeColor = JBColor.namedColor(
@@ -254,9 +250,6 @@ class DSVTablePanel : JPanel(BorderLayout()) {
         }
     }
 
-    /**
-     * Custom header renderer with sort indicator.
-     */
     private inner class DSVHeaderRenderer : DefaultTableCellRenderer() {
         
         init {

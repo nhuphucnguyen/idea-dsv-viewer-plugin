@@ -190,6 +190,28 @@ class DSVParser {
         return count
     }
 
+    fun serialize(headers: List<String>, rows: List<List<String>>, delimiter: Char, hasHeader: Boolean): String {
+        val sb = StringBuilder()
+        if (hasHeader && headers.isNotEmpty()) {
+            sb.appendLine(headers.joinToString(delimiter.toString()) { escapeField(it, delimiter) })
+        }
+        for (row in rows) {
+            sb.appendLine(row.joinToString(delimiter.toString()) { escapeField(it, delimiter) })
+        }
+        if (sb.isNotEmpty()) {
+            sb.setLength(sb.length - 1)
+        }
+        return sb.toString()
+    }
+
+    private fun escapeField(field: String, delimiter: Char): String {
+        return if (field.contains(delimiter) || field.contains('"') || field.contains('\n') || field.contains('\r')) {
+            "\"${field.replace("\"", "\"\"")}\""
+        } else {
+            field
+        }
+    }
+
     companion object {
         val COMMON_DELIMITERS = listOf(
             DelimiterOption(',', "Comma (,)"),

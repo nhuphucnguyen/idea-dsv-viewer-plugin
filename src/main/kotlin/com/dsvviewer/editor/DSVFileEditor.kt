@@ -5,8 +5,10 @@ import com.dsvviewer.parser.ParsedData
 import com.dsvviewer.ui.DSVEditorToolbar
 import com.dsvviewer.ui.DSVTablePanel
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorState
@@ -20,6 +22,7 @@ import com.intellij.ui.components.JBScrollPane
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.beans.PropertyChangeListener
+import java.beans.PropertyChangeSupport
 import java.io.File
 import java.io.FileWriter
 import javax.swing.JFileChooser
@@ -28,10 +31,6 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
 
-/**
- * Custom file editor for DSV files.
- * Displays content in an interactive table view with toolbar controls.
- */
 class DSVFileEditor(
     private val project: Project,
     private val file: VirtualFile
@@ -40,8 +39,11 @@ class DSVFileEditor(
     private val parser = DSVParser()
     private var currentData: ParsedData = ParsedData.empty()
     private var isTableView = true
+    private var isUpdatingDocument = false
 
-    // UI Components
+    private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
+    private val propertyChangeSupport = PropertyChangeSupport(this)
+
     private val mainPanel = JPanel(BorderLayout())
     private val contentPanel = JPanel(CardLayout())
     private val tablePanel = DSVTablePanel()
@@ -64,14 +66,15 @@ class DSVFileEditor(
             onSearch = { query -> tablePanel.search(query) }
         )
 
-        // Set up content panel with card layout
         contentPanel.add(tablePanel, TABLE_VIEW)
-        
-        // Main layout
+
         mainPanel.add(toolbar, BorderLayout.NORTH)
         mainPanel.add(contentPanel, BorderLayout.CENTER)
 
-        // Auto-detect delimiter and parse initially
+        tablePanel.getTableModel().onCellEdited = { _, _, _ ->
+            persistTableEdits()
+        }
+
         detectDelimiterAndParse()
     }
 
@@ -84,7 +87,7 @@ class DSVFileEditor(
 
     private fun readFileContent(): String {
         return try {
-            String(file.contentsToByteArray(), file.charset)
+            document?.text ?: String(file.contentsToByteArray(), file.charset)
         } catch (e: Exception) {
             ""
         }
@@ -106,7 +109,6 @@ class DSVFileEditor(
                 val isZeroBased = toolbar.isZeroBased()
                 val parsedData = parser.parse(content, delimiter, hasHeader, isZeroBased)
 
-                // Update UI on EDT
                 SwingUtilities.invokeLater {
                     currentData = parsedData
                     tablePanel.updateData(parsedData)
@@ -118,6 +120,26 @@ class DSVFileEditor(
                 }
             }
         })
+    }
+
+    private fun persistTableEdits() {
+        if (isUpdatingDocument) return
+        val doc = document ?: return
+        val model = tablePanel.getTableModel()
+        val serialized = parser.serialize(
+            model.getHeaders(),
+            model.getRows(),
+            toolbar.getDelimiter(),
+            toolbar.hasHeader()
+        )
+        isUpdatingDocument = true
+        try {
+            ApplicationManager.getApplication().runWriteAction {
+                doc.setText(serialized)
+            }
+        } finally {
+            isUpdatingDocument = false
+        }
     }
 
     private fun exportToCsv() {
@@ -135,17 +157,15 @@ class DSVFileEditor(
 
             try {
                 FileWriter(exportFile).use { writer ->
-                    // Write headers
                     writer.write(currentData.headers.joinToString(",") { escapeForCsv(it) })
                     writer.write("\n")
-                    
-                    // Write data rows
+
                     for (row in currentData.rows) {
                         writer.write(row.joinToString(",") { escapeForCsv(it) })
                         writer.write("\n")
                     }
                 }
-                
+
                 JOptionPane.showMessageDialog(
                     mainPanel,
                     "File exported successfully to:\n${exportFile.absolutePath}",
@@ -173,26 +193,26 @@ class DSVFileEditor(
 
     private fun toggleView() {
         isTableView = !isTableView
-        
+
         if (isTableView) {
-            // Switch to table view
+            reparse()
             (contentPanel.layout as CardLayout).show(contentPanel, TABLE_VIEW)
         } else {
-            // Switch to text view - create editor if needed
             if (textEditor == null) {
                 createTextEditor()
             }
             (contentPanel.layout as CardLayout).show(contentPanel, TEXT_VIEW)
         }
-        
+
         toolbar.setViewState(isTableView)
     }
 
     private fun createTextEditor() {
+        val doc = document
         val editorFactory = EditorFactory.getInstance()
-        val document = editorFactory.createDocument(readFileContent())
-        textEditor = editorFactory.createEditor(document, project, file, true) as? EditorEx
-        
+        val editorDocument = doc ?: editorFactory.createDocument(readFileContent())
+        textEditor = editorFactory.createEditor(editorDocument, project, file, doc == null) as? EditorEx
+
         textEditor?.let { editor ->
             editor.settings.apply {
                 isLineNumbersShown = true
@@ -200,7 +220,7 @@ class DSVFileEditor(
                 isFoldingOutlineShown = true
                 isRightMarginShown = true
             }
-            
+
             val scrollPane = JBScrollPane(editor.component)
             contentPanel.add(scrollPane, TEXT_VIEW)
         }
@@ -214,13 +234,20 @@ class DSVFileEditor(
 
     override fun setState(state: FileEditorState) {}
 
-    override fun isModified() = false
+    override fun isModified(): Boolean {
+        val doc = document ?: return false
+        return FileDocumentManager.getInstance().unsavedDocuments.contains(doc)
+    }
 
     override fun isValid() = file.isValid
 
-    override fun addPropertyChangeListener(listener: PropertyChangeListener) {}
+    override fun addPropertyChangeListener(listener: PropertyChangeListener) {
+        propertyChangeSupport.addPropertyChangeListener(listener)
+    }
 
-    override fun removePropertyChangeListener(listener: PropertyChangeListener) {}
+    override fun removePropertyChangeListener(listener: PropertyChangeListener) {
+        propertyChangeSupport.removePropertyChangeListener(listener)
+    }
 
     override fun getCurrentLocation(): FileEditorLocation? = null
 

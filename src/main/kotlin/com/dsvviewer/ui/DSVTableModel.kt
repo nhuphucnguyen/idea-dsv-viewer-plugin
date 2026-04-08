@@ -10,26 +10,22 @@ import javax.swing.table.AbstractTableModel
 class DSVTableModel : AbstractTableModel() {
 
     private var headers: List<String> = emptyList()
-    private var rows: List<List<String>> = emptyList()
+    private var rows: MutableList<MutableList<String>> = mutableListOf()
     private var sortColumn: Int = -1
     private var sortAscending: Boolean = true
 
-    /**
-     * Updates the model with new parsed data.
-     */
+    var onCellEdited: ((row: Int, col: Int, newValue: String) -> Unit)? = null
+
     fun updateData(data: ParsedData) {
         headers = data.headers
-        rows = data.rows
+        rows = data.rows.map { it.toMutableList() }.toMutableList()
         sortColumn = -1
         fireTableStructureChanged()
     }
 
-    /**
-     * Clears all data from the model.
-     */
     fun clear() {
         headers = emptyList()
-        rows = emptyList()
+        rows = mutableListOf()
         sortColumn = -1
         fireTableStructureChanged()
     }
@@ -46,52 +42,52 @@ class DSVTableModel : AbstractTableModel() {
         return rows.getOrNull(rowIndex)?.getOrNull(columnIndex) ?: ""
     }
 
-    override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
+    override fun setValueAt(value: Any?, rowIndex: Int, columnIndex: Int) {
+        if (rowIndex < 0 || rowIndex >= rows.size) return
+        val row = rows[rowIndex]
+        if (columnIndex < 0 || columnIndex >= row.size) return
+        val newValue = value?.toString() ?: ""
+        if (row[columnIndex] != newValue) {
+            row[columnIndex] = newValue
+            fireTableCellUpdated(rowIndex, columnIndex)
+            onCellEdited?.invoke(rowIndex, columnIndex, newValue)
+        }
+    }
+
+    override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = true
 
     override fun getColumnClass(columnIndex: Int): Class<*> = String::class.java
 
-    /**
-     * Sorts the table by the specified column.
-     */
     fun sortByColumn(column: Int) {
         if (column < 0 || column >= headers.size) return
 
-        // Toggle sort direction if clicking the same column
         sortAscending = if (sortColumn == column) !sortAscending else true
         sortColumn = column
 
         rows = if (sortAscending) {
-            rows.sortedBy { it.getOrNull(column) ?: "" }
+            rows.sortedBy { it.getOrNull(column) ?: "" }.toMutableList()
         } else {
-            rows.sortedByDescending { it.getOrNull(column) ?: "" }
+            rows.sortedByDescending { it.getOrNull(column) ?: "" }.toMutableList()
         }
 
         fireTableDataChanged()
     }
 
-    /**
-     * Gets the current sort column index.
-     */
     fun getSortColumn(): Int = sortColumn
 
-    /**
-     * Returns whether the current sort is ascending.
-     */
     fun isSortAscending(): Boolean = sortAscending
 
-    /**
-     * Gets the raw row data at the specified index.
-     */
     fun getRowData(rowIndex: Int): List<String>? = rows.getOrNull(rowIndex)
 
-    /**
-     * Gets all rows matching a search query.
-     */
+    fun getHeaders(): List<String> = headers
+
+    fun getRows(): List<List<String>> = rows.map { it.toList() }
+
     fun searchRows(query: String, caseSensitive: Boolean = false): List<Int> {
         if (query.isBlank()) return emptyList()
-        
+
         val searchQuery = if (caseSensitive) query else query.lowercase()
-        
+
         return rows.mapIndexedNotNull { index, row ->
             val matches = row.any { cell ->
                 val cellValue = if (caseSensitive) cell else cell.lowercase()
